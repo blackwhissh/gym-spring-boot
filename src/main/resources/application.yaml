@@ -25,6 +25,8 @@ management:
     env:
       enabled: true
   endpoint:
+    prometheus:
+      enabled: true
     info:
       enabled: true
     health:
