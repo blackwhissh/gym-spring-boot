@@ -10,6 +10,8 @@ import com.epam.hibernate.dto.trainer.response.TrainerTrainingsResponse;
 import com.epam.hibernate.dto.trainer.response.UpdateTrainerResponse;
 import com.epam.hibernate.dto.user.LoginDTO;
 import com.epam.hibernate.service.TrainerService;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,16 +22,21 @@ import java.util.List;
 @RestController
 @RequestMapping(value = "/v1/trainer", consumes = {"application/JSON"}, produces = {"application/JSON", "application/XML"})
 public class TrainerController {
+    Counter registerCounter;
     private final TrainerService trainerService;
 
-    public TrainerController(TrainerService trainerService) {
+    public TrainerController(TrainerService trainerService, MeterRegistry meterRegistry) {
         this.trainerService = trainerService;
+        this.registerCounter = Counter.builder("trainer_register_counter")
+                .description("Number of Hits on Registering Trainer")
+                .register(meterRegistry);
     }
 
     @PostMapping(value = "/register")
     @LogEntryExit(showArgs = true, showResult = true)
     @Operation(summary = "Register Trainer Profile", description = "This method registers Trainer and returns username and password")
     public ResponseEntity<TrainerRegisterResponse> registerTrainee(@RequestBody TrainerRegisterRequest request) {
+        registerCounter.increment();
         return trainerService.createProfile(request);
     }
 

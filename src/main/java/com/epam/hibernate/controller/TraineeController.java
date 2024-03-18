@@ -9,6 +9,8 @@ import com.epam.hibernate.dto.trainee.response.*;
 import com.epam.hibernate.dto.trainer.TrainerListInfo;
 import com.epam.hibernate.dto.user.LoginDTO;
 import com.epam.hibernate.service.TraineeService;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,10 +22,14 @@ import java.util.List;
 @RestController
 @RequestMapping(value = "/v1/trainee", consumes = {"application/JSON"}, produces = {"application/JSON", "application/XML"})
 public class TraineeController {
+    Counter registerCounter;
     private final TraineeService traineeService;
 
-    public TraineeController(TraineeService traineeService) {
+    public TraineeController(TraineeService traineeService, MeterRegistry meterRegistry) {
         this.traineeService = traineeService;
+        this.registerCounter = Counter.builder("trainee_register_counter")
+                .description("Number of Hits on Registering Trainee")
+                .register(meterRegistry);
     }
 
     @PostMapping(value = "/register")
@@ -31,6 +37,7 @@ public class TraineeController {
     @Operation(summary = "Register Trainee Profile", description = "This method registers Trainee profile and returns " +
             "username and password")
     public ResponseEntity<TraineeRegisterResponse> registerTrainee(@RequestBody TraineeRegisterRequest request) {
+        registerCounter.increment();
         return traineeService.createProfile(request);
     }
 
@@ -47,7 +54,6 @@ public class TraineeController {
     @Operation(summary = "Update Trainee Profile", description = "This method updates Trainee profile")
     public ResponseEntity<UpdateTraineeResponse> updateTraineeProfile(@PathVariable String username,
                                                                       @RequestBody UpdateTraineeRequest request) throws AuthenticationException {
-        LoginDTO loginDTO = request.getLoginDTO();
         return traineeService.updateTrainee(username, request);
     }
 
