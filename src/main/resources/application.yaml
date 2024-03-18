@@ -85,4 +85,4 @@ info:
 ---
 spring:
   profiles:
-    active: prod
+    active: admin
