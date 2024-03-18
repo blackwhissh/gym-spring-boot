@@ -20,7 +20,7 @@ management:
     enabled-by-default: false
     web:
       exposure:
-        include: health,info
+        include: health,info,prometheus
   info:
     env:
       enabled: true
