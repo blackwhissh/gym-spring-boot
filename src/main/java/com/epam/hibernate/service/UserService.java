@@ -3,6 +3,7 @@ package com.epam.hibernate.service;
 import com.epam.hibernate.dto.OnOffRequest;
 import com.epam.hibernate.dto.user.LoginDTO;
 import com.epam.hibernate.dto.user.UserInfoDTO;
+import com.epam.hibernate.entity.RoleEnum;
 import com.epam.hibernate.entity.User;
 import com.epam.hibernate.exception.WrongPasswordException;
 import com.epam.hibernate.repository.UserRepository;
@@ -11,7 +12,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import javax.naming.AuthenticationException;
-import java.nio.file.AccessDeniedException;
 
 import static com.epam.hibernate.Utils.checkAdmin;
 
@@ -38,7 +38,7 @@ public class UserService {
         return ResponseEntity.status(200).body("Password changed successfully");
     }
 
-    public ResponseEntity<?> activateDeactivate(@NotNull String username, @NotNull OnOffRequest request) throws AuthenticationException{
+    public ResponseEntity<?> activateDeactivate(@NotNull String username, @NotNull OnOffRequest request) throws AuthenticationException {
         checkAdmin(request.getUsername(), userRepository);
         authenticate(new LoginDTO(request.getUsername(), request.getPassword()));
         User user = userRepository.findByUsername(username);
@@ -47,7 +47,14 @@ public class UserService {
         return ResponseEntity.ok("User activated/deactivated successfully");
     }
 
-    public void saveAdmin(User admin) {
+    public void saveAdmin() {
+        User admin = new User();
+        admin.setActive(true);
+        admin.setFirstName("admin");
+        admin.setLastName("admin");
+        admin.setUsername("admin");
+        admin.setPassword("admin");
+        admin.setRole(RoleEnum.ADMIN);
         userRepository.save(admin);
     }
 }

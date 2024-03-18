@@ -11,10 +11,13 @@
 	<groupId>com.epam</groupId>
 	<artifactId>hibernate</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>hibernate</name>
-	<description>Hibernate Task</description>
+	<name>Spring Boot</name>
+	<description>Gym Spring Boot App with Actuator</description>
 	<properties>
 		<java.version>17</java.version>
+		<maven.build.timestamp.format>
+			yyyy-MM-dd HH:mm:ss
+		</maven.build.timestamp.format>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -24,6 +27,10 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-aop</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>javax.servlet</groupId>

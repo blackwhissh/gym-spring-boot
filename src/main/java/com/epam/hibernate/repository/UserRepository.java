@@ -78,5 +78,11 @@ public class UserRepository {
         logger.info("User activated/deactivated successfully");
     }
 
+    @Transactional
+    public void removeUser(String username){
+        entityManager.createQuery("delete User u where u.username = :username")
+                .setParameter("username",username)
+                .executeUpdate();
+    }
 
 }
