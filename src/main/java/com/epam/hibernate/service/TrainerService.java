@@ -16,6 +16,8 @@ import com.epam.hibernate.entity.User;
 import com.epam.hibernate.repository.TrainerRepository;
 import com.epam.hibernate.repository.TrainingTypeRepository;
 import com.epam.hibernate.repository.UserRepository;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import jakarta.transaction.Transactional;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,34 +32,40 @@ import static com.epam.hibernate.Utils.generateUsername;
 
 @Service
 public class TrainerService {
+    private final Timer registerTimer;
     private final TrainingTypeRepository trainingTypeRepository;
     private final TrainerRepository trainerRepository;
     private final UserRepository userRepository;
     private final UserService userService;
 
     @Autowired
-    public TrainerService(TrainingTypeRepository trainingTypeRepository,
+    public TrainerService(MeterRegistry meterRegistry, TrainingTypeRepository trainingTypeRepository,
                           TrainerRepository trainerRepository,
                           UserRepository userRepository, UserService userService) {
         this.trainingTypeRepository = trainingTypeRepository;
         this.trainerRepository = trainerRepository;
         this.userRepository = userRepository;
         this.userService = userService;
+        this.registerTimer = Timer.builder("trainer_register_timer")
+                .description("Times Registering Trainer")
+                .register(meterRegistry);
     }
 
     public ResponseEntity<TrainerRegisterResponse> createProfile(@NotNull TrainerRegisterRequest request) {
         User trainerUser = new User(request.getFirstName(), request.getLastName(), true, RoleEnum.TRAINER);
-        if (!userRepository.usernameExists(generateUsername(trainerUser.getFirstName(), trainerUser.getLastName(), false))) {
-            trainerUser.setUsername(generateUsername(trainerUser.getFirstName(), trainerUser.getLastName(), false));
-        } else {
-            trainerUser.setUsername(generateUsername(trainerUser.getFirstName(), trainerUser.getLastName(), true));
-        }
-        Trainer trainer = new Trainer(trainingTypeRepository.selectByType(request.getSpecialization()),
-                trainerUser);
-        trainerRepository.save(trainer);
+        registerTimer.record(() -> {
+            if (!userRepository.usernameExists(generateUsername(trainerUser.getFirstName(), trainerUser.getLastName(), false))) {
+                trainerUser.setUsername(generateUsername(trainerUser.getFirstName(), trainerUser.getLastName(), false));
+            } else {
+                trainerUser.setUsername(generateUsername(trainerUser.getFirstName(), trainerUser.getLastName(), true));
+            }
+            Trainer trainer = new Trainer(trainingTypeRepository.selectByType(request.getSpecialization()),
+                    trainerUser);
+            trainerRepository.save(trainer);
+        });
         return ResponseEntity.ok().body(new TrainerRegisterResponse(
-                trainer.getUser().getUsername(),
-                trainer.getUser().getPassword()
+                trainerUser.getUsername(),
+                trainerUser.getPassword()
         ));
     }
 

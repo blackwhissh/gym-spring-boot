@@ -12,6 +12,8 @@ import com.epam.hibernate.exception.UserInactiveException;
 import com.epam.hibernate.repository.TraineeRepository;
 import com.epam.hibernate.repository.TrainerRepository;
 import com.epam.hibernate.repository.UserRepository;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import jakarta.transaction.Transactional;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,28 +32,34 @@ import static com.epam.hibernate.Utils.generateUsername;
 
 @Service
 public class TraineeService {
+    private final Timer timer;
     private final TraineeRepository traineeRepository;
     private final UserRepository userRepository;
     private final TrainerRepository trainerRepository;
     private final UserService userService;
 
     @Autowired
-    public TraineeService(TraineeRepository traineeRepository, UserRepository userRepository, TrainerRepository trainerRepository, UserService userService) {
+    public TraineeService(MeterRegistry meterRegistry, TraineeRepository traineeRepository, UserRepository userRepository, TrainerRepository trainerRepository, UserService userService) {
         this.traineeRepository = traineeRepository;
         this.userRepository = userRepository;
         this.trainerRepository = trainerRepository;
         this.userService = userService;
+        this.timer = Timer.builder("trainee_register_timer")
+                .description("Times Registering Trainee")
+                .register(meterRegistry);
     }
 
     public ResponseEntity<TraineeRegisterResponse> createProfile(@NotNull TraineeRegisterRequest request) {
         User traineeUser = new User(request.getFirstName(), request.getLastName(), true, RoleEnum.TRAINEE);
-        if (!userRepository.usernameExists(generateUsername(traineeUser.getFirstName(), traineeUser.getLastName(), false))) {
-            traineeUser.setUsername(generateUsername(traineeUser.getFirstName(), traineeUser.getLastName(), false));
-        } else {
-            traineeUser.setUsername(generateUsername(traineeUser.getFirstName(), traineeUser.getLastName(), true));
-        }
-        Trainee trainee = new Trainee(request.getDob(), request.getAddress(), traineeUser);
-        traineeRepository.save(trainee);
+        timer.record(() -> {
+            if (!userRepository.usernameExists(generateUsername(traineeUser.getFirstName(), traineeUser.getLastName(), false))) {
+                traineeUser.setUsername(generateUsername(traineeUser.getFirstName(), traineeUser.getLastName(), false));
+            } else {
+                traineeUser.setUsername(generateUsername(traineeUser.getFirstName(), traineeUser.getLastName(), true));
+            }
+            Trainee trainee = new Trainee(request.getDob(), request.getAddress(), traineeUser);
+            traineeRepository.save(trainee);
+        });
 
         return ResponseEntity.ok().body(new TraineeRegisterResponse(traineeUser.getUsername(), traineeUser.getPassword()));
     }
@@ -102,7 +110,7 @@ public class TraineeService {
     }
 
     @Transactional
-    public void deleteTrainee(@NotNull String username, @NotNull LoginDTO loginDTO) throws AuthenticationException, AccessDeniedException {
+    public void deleteTrainee(@NotNull String username, @NotNull LoginDTO loginDTO) throws AuthenticationException {
         checkAdmin(loginDTO.getUsername(), userRepository);
         userService.authenticate(loginDTO);
         traineeRepository.deleteTrainee(username);
